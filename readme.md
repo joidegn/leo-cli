@@ -19,5 +19,6 @@ pip install leo-cli
 ##usage:
 ===================
 leo example
-leo example word
+
+leo another example
 
