@@ -16,6 +16,10 @@ pip install beautifulsoup4 requests
 ###install leo-cli
 pip install leo-cli
 
+###update
+There has been a layout change on leo.org so you might have to 
+pip install leo-cli --upgrade
+
 ##usage:
 ===================
 leo example
