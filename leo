@@ -5,7 +5,8 @@ import requests
 from bs4 import BeautifulSoup
 
 COUNTRY_CODES = ['de', 'en', 'fr', 'es']
-URL = """http://dict.leo.org/ende?lp=ende&searchLoc=0&cmpType=relaxed&sectHdr=on&lang=%(lang)s&spellToler=&search=%(word)s"""
+
+URL = """http://dict.leo.org/dictQuery/m-vocab/ende/query.xml?tolerMode=nof&lp=ende&lang=%(lang)s&rmWords=off&rmSearch=on&search=%(word)s&searchLoc=0&resultOrder=basic&multiwordShowSingle=on"""
 
 lang = 'en'  # language
 help_text = """Usage leo [language] phrase1 [phrase2] [phrase3] ...\n\n
@@ -18,12 +19,11 @@ def translate(word, lang):
             'word': word
         }
     )
-    soup = BeautifulSoup(r.text)
-    results = soup.find(id='results')
+    soup = BeautifulSoup(r.text, 'xml')
+    results = soup.find_all('entry')
     if results:
-        trs = results.find_all('tr', valign='top')
-        results_origin = [tr.find_all('td')[1].get_text() for tr in trs]
-        results_translation = [tr.find_all('td')[3].get_text() for tr in trs]
+        results_translation = [res.find(hc=0).find('word').get_text() for res in results]
+        results_origin = [res.find(hc=1).find('word').get_text() for res in results]
         return list(zip(results_origin, results_translation))
 
 if sys.argv[1] in COUNTRY_CODES:
