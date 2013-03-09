@@ -34,7 +34,7 @@ phrases = [arg for arg in sys.argv[1:] if arg not in COUNTRY_CODES]
 translations = {word: translate(word, lang) for word in phrases}
 for word in translations:
     if len(translations) > 1:
-        print('%s:' % word)
+        print('\n%s:' % word)
     if translations[word]:
         for trans in translations[word]:
             print('%s\t\t%s' % trans)
