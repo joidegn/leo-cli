@@ -4,21 +4,24 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 
-COUNTRY_CODES = ['de', 'en', 'fr', 'es']
+COUNTRY_CODES = {'de', 'en', 'fr', 'es'}
 
-URL = """http://dict.leo.org/dictQuery/m-vocab/ende/query.xml?tolerMode=nof&lp=ende&lang=%(lang)s&rmWords=off&rmSearch=on&search=%(word)s&searchLoc=0&resultOrder=basic&multiwordShowSingle=on"""
+URL = """http://dict.leo.org/dictQuery/m-vocab/ende/query.xml?tolerMode=nof&lp=%(lang)s&lang=de&rmWords=off&rmSearch=on&search=%(word)s&searchLoc=0&resultOrder=basic&multiwordShowSingle=on"""
 
-lang = 'en'  # language
+lang = 'ende'  # language
 help_text = """Usage leo [language] phrase1 [phrase2] [phrase3] ...\n\n
     \t language can be one of en, fr, es."""
 
+
 def translate(word, lang):
+    print ('translating to: %s' % lang)
     r = requests.get(
         URL % {
             'lang': lang,
             'word': word
         }
     )
+
     soup = BeautifulSoup(r.text, 'xml')
     results = soup.find_all('entry')
     if results:
@@ -27,7 +30,7 @@ def translate(word, lang):
         return list(zip(results_origin, results_translation))
 
 if sys.argv[1] in COUNTRY_CODES:
-    lang = sys.argv[1]
+    lang = sys.argv[1] + 'de'
 
 phrases = [arg for arg in sys.argv[1:] if arg not in COUNTRY_CODES]
 
