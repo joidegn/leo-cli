@@ -5,6 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 
 COUNTRY_CODES = {'de', 'en', 'fr', 'es'}
+LANGUAGES = {'fr': 'French', 'de': 'German', 'es': 'Spanish', 'en': 'English'}
 
 URL = """http://dict.leo.org/dictQuery/m-vocab/ende/query.xml?tolerMode=nof&lp=%(lang)s&lang=de&rmWords=off&rmSearch=on&search=%(word)s&searchLoc=0&resultOrder=basic&multiwordShowSingle=on"""
 
@@ -12,9 +13,9 @@ lang = 'ende'  # language
 help_text = """Usage leo [language] phrase1 [phrase2] [phrase3] ...\n\n
     \t language can be one of en, fr, es."""
 
+    print ('translating to: %s' % LANGUAGES[sys.argv[1]])
 
 def translate(word, lang):
-    print ('translating to: %s' % lang)
     r = requests.get(
         URL % {
             'lang': lang,
