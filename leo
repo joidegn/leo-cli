@@ -23,11 +23,13 @@ def translate(word, lang):
     )
 
     soup = BeautifulSoup(r.text, 'xml')
-    results = soup.find_all('entry')
-    if results:
-        results_translation = [res.find(hc=0).find('word').get_text() for res in results]
-        results_origin = [res.find(hc=1).find('word').get_text() for res in results]
-        return list(zip(results_origin, results_translation))
+
+    entries = soup.find_all('entry')
+    if entries:
+        return [tuple([side.find('word').get_text()
+                       for side in entry.find_all('side')])
+                for entry in entries]
+
 
 if sys.argv[1] in COUNTRY_CODES:
     lang = sys.argv[1] + 'de'
