@@ -3,14 +3,14 @@
 from distutils.core import setup
 
 setup(name='leo-cli',
-    version='0.2',
+    version='0.3',
     description='leo.org command line tool',
     author='Johannes Degn',
     author_email='j@degn.de',
     license="MIT",
     url='https://github.com/JoiDegn/leo-cli',
     scripts=['leo'],
-    requires=['beautifulsoup4 (>=4.3.0)', 'requests (>=1.2.3)'],
+    install_requires=['beautifulsoup4 (>=4.3.0)', 'requests (>=1.2.3)'],
     classifiers = [
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
