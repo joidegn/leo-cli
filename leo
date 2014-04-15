@@ -37,7 +37,6 @@ if __name__ == '__main__':
 
     phrases = [arg for arg in sys.argv[1:] if arg not in COUNTRY_CODES]
 
-    print ('translating to: %s' % LANGUAGES[sys.argv[1]])
     translations = {word: translate(word, lang) for word in phrases}
     for word in translations:
         if len(translations) > 1:
