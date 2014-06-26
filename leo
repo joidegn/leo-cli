@@ -32,6 +32,10 @@ def translate(word, lang):
 
 
 if __name__ == '__main__':
+    if len(sys.argv) == 1 or sys.argv[1] == 'help':
+        print(help_text)
+        sys.exit(0)
+
     if sys.argv[1] in COUNTRY_CODES:
         lang = sys.argv[1] + 'de'
 
