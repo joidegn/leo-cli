@@ -1,7 +1,7 @@
 %define name leo-cli
 %define version 0.3.4
 %define unmangled_version 0.3.4
-%define release 1
+%define release 2
 
 Summary: leo.org command line tool
 Name: %{name}
@@ -16,6 +16,8 @@ BuildArch: noarch
 Vendor: Johannes Degn <j@degn.de>
 Url: https://github.com/JoiDegn/leo-cli
 
+BuildRequires: python3
+
 %description
 leo-cli is a command line tool which can be used to translate words or phrases
 from several languages to german. It uses the open dictionary dict.leo.org. I
@@ -27,10 +29,10 @@ person.
 %setup -n %{name}-%{unmangled_version}
 
 %build
-python setup.py build
+python3 setup.py build
 
 %install
-python setup.py install -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+python3 setup.py install -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
 
 %clean
 rm -rf $RPM_BUILD_ROOT
