@@ -2,6 +2,7 @@
 
 import sys
 import requests
+from tabulate import tabulate
 from bs4 import BeautifulSoup
 
 COUNTRY_CODES = {'de', 'en', 'fr', 'es', 'pt', 'ru'}
@@ -46,9 +47,7 @@ if __name__ == '__main__':
         if len(translations) > 1:
             print('\n%s:' % word)
         if translations[word]:
-            for trans in translations[word]:
-                if len(trans) == 2:
-                    print('%s\t\t%s' % trans)
+            print(tabulate(translations[word], headers=[LANGUAGES[lang[0:2]], 'German']))
         else:
             print('\tno translation found...')
 
