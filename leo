@@ -47,7 +47,7 @@ if __name__ == '__main__':
             print('\n%s:' % word)
         if translations[word]:
             for trans in translations[word]:
-                if trans:
+                if len(trans) == 2:
                     print('%s\t\t%s' % trans)
         else:
             print('\tno translation found...')
