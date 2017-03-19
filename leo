@@ -26,11 +26,19 @@ def translate(word, lang):
     soup = BeautifulSoup(r.text, 'xml')
 
     entries = soup.find_all('entry')
-    if entries:
-        return [tuple([side.find('word').get_text()
-                       for side in entry.find_all('side') if side.find('word')])
-                for entry in entries]
+    if not entries:
+        return
 
+    parsed_entries = []
+    for entry in entries:
+        parsed_sides = []
+        for side in entry.find_all('side'):
+            if side.find('repr'):
+                text = " ".join(side.find('repr').strings)
+                parsed_sides.append(text)
+        parsed_entries.append(tuple(parsed_sides))
+
+    return parsed_entries
 
 if __name__ == '__main__':
     if len(sys.argv) == 1 or sys.argv[1] == 'help':
