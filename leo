@@ -1,31 +1,24 @@
 #!/usr/bin/env python3
 
-import sys
 import requests
+import sys
+import time
 from tabulate import tabulate
 from bs4 import BeautifulSoup
 
 COUNTRY_CODES = {'de', 'en', 'fr', 'es', 'pt', 'ru'}
 LANGUAGES = {'fr': 'French', 'de': 'German', 'es': 'Spanish', 'en': 'English', 'ru': 'Russian', 'pt': 'Portuguese'}
 
-URL = """http://dict.leo.org/dictQuery/m-vocab/%(lang)s/query.xml?tolerMode=nof&lp=%(lang)s&lang=de&rmWords=off&rmSearch=on&search=%(word)s&searchLoc=0&resultOrder=basic&multiwordShowSingle=on"""
+TRANSLATE_URL = """http://dict.leo.org/dictQuery/m-vocab/%(lang)s/query.xml?tolerMode=nof&lp=%(lang)s&lang=de&rmWords=off&rmSearch=on&search=%(word)s&searchLoc=0&resultOrder=basic&multiwordShowSingle=on"""
+
+FLECTAB_URL = """https://dict.leo.org/dictQuery/m-vocab/ende/stemming.xml"""
 
 lang = 'ende'  # language
 help_text = """Usage leo [language] phrase1 [phrase2] [phrase3] ...\n\n
     \t language can be one of en, fr, es, pt, ru."""
 
-
 def translate(word, lang):
-    r = requests.get(
-        URL % {
-            'lang': lang,
-            'word': word
-        }
-    )
-
-    soup = BeautifulSoup(r.text, 'xml')
-
-    entries = soup.find_all('entry')
+    entries = _get_entries(word, lang)
     if not entries:
         return
 
@@ -33,29 +26,139 @@ def translate(word, lang):
     for entry in entries:
         parsed_sides = []
         for side in entry.find_all('side'):
-            if side.find('repr'):
-                text = " ".join(side.find('repr').strings)
-                parsed_sides.append(text)
+            if side.find('word'):
+                word = side.find('word').get_text()
+            else:
+                continue
+            if side.find('small'):
+                forms = side.find_all('small')
+                for form in forms:
+                    form = " ".join(form.strings)
+                    # verb conjugations
+                    if "|" in form:
+                        form = form.replace("|", "")
+                        form = form.strip()
+                        word += " (" + form + ")"
+                    # noun plurals (German-only)
+                    elif "Pl.:" in form:
+                        form = form.replace("Pl.:", "")
+                        form = form.strip()
+                        word += " (" + form + ")"
+            parsed_sides.append(word)
         parsed_entries.append(tuple(parsed_sides))
 
     return parsed_entries
+
+def _get_entries(word, lang):
+    r = requests.get(
+        TRANSLATE_URL % {
+            'lang': lang,
+            'word': word
+        }
+    )
+    soup = BeautifulSoup(r.text, 'xml')
+    return soup.find_all('entry')
+
+def flecttab(word, lang):
+    entries = _get_entries(word, lang)
+    if not entries:
+        return
+    tables = _get_tables(entries)
+    for en, table in tables:
+        if table.find('verbtab'):
+            yield _extract_verb(table, en)
+        elif table.find('nountab'):
+            yield _extract_noun(table, en)
+        time.sleep(3)
+
+def _extract_noun(table, en):
+    # TODO
+    pass
+
+def _extract_verb(table, en):
+    verb = {'type': 'verb', 'en': en, 'moods': []}
+    aux = table.find('auxiliary')
+    if aux:
+        verb['aux'] = aux.get_text().strip()
+    for mood in table.find_all('mood'):
+        mood_name = mood['title']
+        mood_struct = {'name': mood_name, 'tenses': []}
+        verb['moods'].append(mood_struct)
+        for tense in mood.find_all('tense'):
+            if not tense.has_attr('title'):
+                continue
+            tense_struct = {'name': tense['title'], 'cases': []}
+            mood_struct['tenses'].append(tense_struct)
+            for case in tense.find_all("case"):
+                tense_struct['cases'].append(_format_case(case))
+    return verb
+
+def _format_case(case):
+    pronouns = "/".join([ppron.get_text() for ppron in case.find_all("ppron")])
+    aux = case.find("aux")
+    prefix = case.find("prefix")
+    radical = case.find("radical")
+    ending = case.find("ending")
+
+    final = ""
+    if pronouns:
+        final += pronouns + " "
+    if aux:
+        final += (aux.get_text() + " ")
+    final += "".join([part.get_text() for part in [prefix, radical, ending] if part])
+    return final
+
+def _get_tables(entries):
+    keys = set()
+    url2en = {}
+    for entry in entries:
+        en = entry.find('side', lang='en').find('word').get_text()
+
+        sides = entry.find_all('side', lang='de')
+        for side in sides:
+            flecttab = side.find('flecttab')
+            if flecttab:
+                url = flecttab['url']
+                url2en[url] = en
+                keys.add(url)
+
+    for key in keys:
+        r = requests.get(FLECTAB_URL + key)
+        table = BeautifulSoup(r.text, 'xml')
+        yield (url2en[key], table)
 
 if __name__ == '__main__':
     if len(sys.argv) == 1 or sys.argv[1] == 'help':
         print(help_text)
         sys.exit(0)
 
+    arg_start_pos = 1
     if sys.argv[1] in COUNTRY_CODES:
         lang = sys.argv[1] + 'de'
+        arg_start_pos += 1
 
-    phrases = [arg for arg in sys.argv[1:] if arg not in COUNTRY_CODES]
+    phrases = [arg for arg in sys.argv[arg_start_pos:] if arg not in COUNTRY_CODES]
 
-    translations = {word: translate(word, lang) for word in phrases}
-    for word in translations:
-        if len(translations) > 1:
-            print('\n%s:' % word)
-        if translations[word]:
-            print(tabulate(translations[word], headers=[LANGUAGES[lang[0:2]], 'German']))
-        else:
-            print('\tno translation found...')
+    if sys.argv[arg_start_pos] == 'conj':
+        for word in phrases:
+            for table in flecttab(word, lang):
+                if table['type'] == 'verb':
+                    print(table['en'])
+                    print("Hilfsverb: " + table['aux'])
+                    for mood in table['moods']:
+                        print("===" + mood['name'] + "===")
+                        # TODO: would be better to write two at a time like on the website
+                        for tense in mood['tenses']:
+                            print("---" + tense['name'] + "---")
+                            for case in tense['cases']:
+                                print(case)
+    else:
+        translations = {word: translate(word, lang) for word in phrases}
+        for word in translations:
+            if len(translations) > 1:
+                print('\n%s:' % word)
+            if translations[word]:
+                print(tabulate(translations[word], headers=[LANGUAGES[lang[0:2]], 'German']))
+            else:
+                print('\tno translation found...')
 
