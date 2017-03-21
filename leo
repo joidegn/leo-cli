@@ -64,19 +64,39 @@ def flecttab(word, lang):
     if not entries:
         return
     tables = _get_tables(entries)
-    for en, table in tables:
+    for en, de, table in tables:
         if table.find('verbtab'):
-            yield _extract_verb(table, en)
+            yield _extract_verb(table, en, de)
         elif table.find('nountab'):
-            yield _extract_noun(table, en)
+            yield _extract_noun(table, en, de)
         time.sleep(3)
 
-def _extract_noun(table, en):
-    # TODO
-    pass
+def _extract_noun(table, en, de):
+    noun = {'type': 'noun', 'en': en, 'de': de, 'moods': []}
+    for mood in table.find_all('mood'):
+        mood_struct = {'name': mood['title'], 'variants': []}
+        for variant in mood.find_all('variant'):
+            if variant['title'] == '':
+                continue
+            variant_struct = {'name': variant['title'], 'cases': []}
+            for case in variant.find_all('case'):
+                variant_struct['cases'].append(_format_noun_case(case))
+            mood_struct['variants'].append(variant_struct)
+        noun['moods'].append(mood_struct)
 
-def _extract_verb(table, en):
-    verb = {'type': 'verb', 'en': en, 'moods': []}
+    return noun
+
+def _format_noun_case(case):
+    case_name = case['cn']
+    final = ""
+    radical = case.find('radical')
+    radical = radical.get_text() if radical else ''
+    ending = case.find('ending').get_text()
+    art = case.find('art')
+    return {'name': case['cn'], 'value': (art.get_text() + ' ' if art else '') + radical + ending}
+
+def _extract_verb(table, en, de):
+    verb = {'type': 'verb', 'en': en, 'de': de, 'moods': []}
     aux = table.find('auxiliary')
     if aux:
         verb['aux'] = aux.get_text().strip()
@@ -90,17 +110,17 @@ def _extract_verb(table, en):
             tense_struct = {'name': tense['title'], 'cases': []}
             mood_struct['tenses'].append(tense_struct)
             for case in tense.find_all("case"):
-                tense_struct['cases'].append(_format_case(case))
+                tense_struct['cases'].append(_format_verb_case(case))
     return verb
 
-def _format_case(case):
+def _format_verb_case(case):
     pronouns = "/".join([ppron.get_text() for ppron in case.find_all("ppron")])
     aux = case.find("aux")
     prefix = case.find("prefix")
     radical = case.find("radical")
     ending = case.find("ending")
 
-    final = ""
+    final = ''
     if pronouns:
         final += pronouns + " "
     if aux:
@@ -111,8 +131,10 @@ def _format_case(case):
 def _get_tables(entries):
     keys = set()
     url2en = {}
+    url2de = {}
     for entry in entries:
         en = entry.find('side', lang='en').find('word').get_text()
+        de = entry.find('side', lang='de').find('word').get_text()
 
         sides = entry.find_all('side', lang='de')
         for side in sides:
@@ -120,12 +142,20 @@ def _get_tables(entries):
             if flecttab:
                 url = flecttab['url']
                 url2en[url] = en
+                url2de[url] = de
                 keys.add(url)
 
     for key in keys:
         r = requests.get(FLECTAB_URL + key)
         table = BeautifulSoup(r.text, 'xml')
-        yield (url2en[key], table)
+        yield (url2en[key], url2de[key], table)
+
+def pairwise(it):
+    it = iter(it)
+    while True:
+        x = next(it)
+        y = next(it, None)
+        yield x, y
 
 if __name__ == '__main__':
     if len(sys.argv) == 1 or sys.argv[1] == 'help':
@@ -142,8 +172,8 @@ if __name__ == '__main__':
     if sys.argv[arg_start_pos] == 'conj':
         for word in phrases:
             for table in flecttab(word, lang):
+                print(table['en'] + "/" + table['de'])
                 if table['type'] == 'verb':
-                    print(table['en'])
                     print("Hilfsverb: " + table['aux'])
                     for mood in table['moods']:
                         print("===" + mood['name'] + "===")
@@ -152,6 +182,18 @@ if __name__ == '__main__':
                             print("---" + tense['name'] + "---")
                             for case in tense['cases']:
                                 print(case)
+                elif table['type'] == 'noun':
+                    for mood in table['moods']:
+                        print("===" + mood['name'] + "===")
+                        for x, y in pairwise(mood['variants']):
+                            if y:
+                                x_string = tabulate(x['cases'])
+                                y_string = tabulate(y['cases'])
+                                print(tabulate({x['name']: x_string.split("\n"), y['name']: y_string.split("\n")}, headers='keys'))
+                            else:
+                                print(x['name'])
+                                print(tabulate(x['cases']))
+                print()
     else:
         translations = {word: translate(word, lang) for word in phrases}
         for word in translations:
@@ -161,4 +203,3 @@ if __name__ == '__main__':
                 print(tabulate(translations[word], headers=[LANGUAGES[lang[0:2]], 'German']))
             else:
                 print('\tno translation found...')
-
