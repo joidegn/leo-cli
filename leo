@@ -69,6 +69,7 @@ def flecttab(word, lang):
             yield _extract_verb(table, en, de)
         elif table.find('nountab'):
             yield _extract_noun(table, en, de)
+        # TODO: adjectives
         time.sleep(3)
 
 def _extract_noun(table, en, de):
@@ -80,6 +81,8 @@ def _extract_noun(table, en, de):
                 continue
             variant_struct = {'name': variant['title'], 'cases': []}
             for case in variant.find_all('case'):
+                if not case.has_attr('cn'):
+                    continue
                 variant_struct['cases'].append(_format_noun_case(case))
             mood_struct['variants'].append(variant_struct)
         noun['moods'].append(mood_struct)
@@ -89,10 +92,10 @@ def _extract_noun(table, en, de):
 def _format_noun_case(case):
     case_name = case['cn']
     final = ""
+    art = case.find('art')
     radical = case.find('radical')
     radical = radical.get_text() if radical else ''
     ending = case.find('ending').get_text()
-    art = case.find('art')
     return {'name': case['cn'], 'value': (art.get_text() + ' ' if art else '') + radical + ending}
 
 def _extract_verb(table, en, de):
@@ -169,6 +172,7 @@ if __name__ == '__main__':
 
     phrases = [arg for arg in sys.argv[arg_start_pos:] if arg not in COUNTRY_CODES]
 
+    # TODO: Run translation then conjugation immediately afterwards
     if sys.argv[arg_start_pos] == 'conj':
         for word in phrases:
             for table in flecttab(word, lang):
@@ -177,11 +181,13 @@ if __name__ == '__main__':
                     print("Hilfsverb: " + table['aux'])
                     for mood in table['moods']:
                         print("===" + mood['name'] + "===")
-                        # TODO: would be better to write two at a time like on the website
-                        for tense in mood['tenses']:
-                            print("---" + tense['name'] + "---")
-                            for case in tense['cases']:
-                                print(case)
+                        for x, y in pairwise(mood['tenses']):
+                            if y:
+                                print(tabulate({x['name']: x['cases'], y['name']: y['cases']}, headers='keys'))
+                            else:
+                                print(x['name'])
+                                print('-' * len(x['name']))
+                                print("\n".join(x['cases']))
                 elif table['type'] == 'noun':
                     for mood in table['moods']:
                         print("===" + mood['name'] + "===")
