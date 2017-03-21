@@ -119,7 +119,11 @@ def _extract_verb(table, en, de):
 def _format_verb_case(case):
     pronouns = "/".join([ppron.get_text() for ppron in case.find_all("ppron")])
     aux = case.find("aux")
-    prefix = case.find("prefix")
+    prefixes = case.find_all("pref")
+    if prefixes:
+        prefixes = "".join(prefix.get_text() for prefix in prefixes)
+    else:
+        prefixes = ""
     radical = case.find("radical")
     ending = case.find("ending")
 
@@ -128,7 +132,8 @@ def _format_verb_case(case):
         final += pronouns + " "
     if aux:
         final += (aux.get_text() + " ")
-    final += "".join([part.get_text() for part in [prefix, radical, ending] if part])
+    final += prefixes
+    final += "".join([part.get_text() for part in [radical, ending] if part])
     return final
 
 def _get_tables(entries):
