@@ -13,14 +13,11 @@ from bs4 import BeautifulSoup
 
 COUNTRY_CODES = {'de', 'en', 'fr', 'es', 'pt', 'ru'}
 LANGUAGES = {'fr': 'French', 'de': 'German', 'es': 'Spanish', 'en': 'English', 'ru': 'Russian', 'pt': 'Portuguese'}
+POS = {'n', 'v', 'adj'}
 
 TRANSLATE_URL = """http://dict.leo.org/dictQuery/m-vocab/%(lang)s/query.xml?tolerMode=nof&lp=%(lang)s&lang=de&rmWords=off&rmSearch=on&search=%(word)s&searchLoc=0&resultOrder=basic&multiwordShowSingle=on"""
 
 FLECTAB_URL = """https://dict.leo.org/dictQuery/m-vocab/ende/stemming.xml"""
-
-lang = 'ende'  # language
-help_text = """Usage leo [language] phrase1 [phrase2] [phrase3] ...\n\n
-    \t language can be one of en, fr, es, pt, ru."""
 
 def translate(word, lang):
     entries = _get_entries(word, lang)
@@ -64,17 +61,17 @@ def _get_entries(word, lang):
     soup = BeautifulSoup(r.text, 'xml')
     return soup.find_all('entry')
 
-def flecttab(word, lang):
+def flecttab(word, lang, pos):
     entries = _get_entries(word, lang)
     if not entries:
         return
-    tables = _get_tables(entries)
+    tables = _get_tables(entries, pos)
     for en, de, table in tables:
-        if table.find('verbtab'):
+        if table.find('verbtab') and (pos is None or pos == 'v'):
             yield _extract_verb(table, en, de)
-        elif table.find('nountab'):
+        elif table.find('nountab') and (pos is None or pos == 'n'):
             yield _extract_noun(table, en, de)
-        elif table.find('adjtab'):
+        elif table.find('adjtab') and (pos is None or pos == 'adj'):
             yield _extract_adjective(table, en, de)
         # TODO: adjectives
         time.sleep(3)
@@ -198,7 +195,7 @@ def _format_verb_case(case):
         final += " " + spref.get_text()
     return final
 
-def _get_tables(entries):
+def _get_tables(entries, pos):
     keys = set()
     url2en = {}
     url2de = {}
@@ -212,6 +209,13 @@ def _get_tables(entries):
         for side in sides:
             flecttab = side.find('flecttab')
             if flecttab:
+                if pos:
+                    if pos == 'adj' and flecttab['stemType'] != 'adj':
+                        continue
+                    elif pos == 'v' and flecttab['stemType'] != 'verb':
+                        continue
+                    elif pos == 'n' and flecttab['stemType'] != 'noun':
+                        continue
                 url = flecttab['url']
                 url2en[url] = en
                 url2de[url] = de
@@ -234,17 +238,30 @@ if __name__ == '__main__':
         print(help_text)
         sys.exit(0)
 
+    lang = 'ende'  # language
+    help_text = """Usage leo [language] phrase1 [phrase2] [phrase3] ...\n\n
+        \t language can be one of en, fr, es, pt, ru."""
+    pos = None
+    conj = False
     arg_start_pos = 1
-    if sys.argv[1] in COUNTRY_CODES:
-        lang = sys.argv[1] + 'de'
+    if sys.argv[arg_start_pos] in COUNTRY_CODES:
+        lang = sys.argv[arg_start_pos] + 'de'
         arg_start_pos += 1
 
-    phrases = [arg for arg in sys.argv[arg_start_pos:] if arg not in COUNTRY_CODES]
+    if sys.argv[arg_start_pos] == 'conj':
+        conj = True
+        arg_start_pos += 1
+
+    if sys.argv[arg_start_pos].lower() in POS:
+        pos = sys.argv[arg_start_pos].lower()
+        arg_start_pos += 1
+
+    phrases = [arg for arg in sys.argv[arg_start_pos:] if arg not in COUNTRY_CODES and arg not in POS]
 
     # TODO: Run translation then conjugation immediately afterwards
-    if sys.argv[arg_start_pos] == 'conj':
+    if conj:
         for word in phrases:
-            for table in flecttab(word, lang):
+            for table in flecttab(word, lang, pos):
                 print(table['en'] + "/" + table['de'])
                 if table['type'] == 'verb':
                     print("Hilfsverb: " + table['aux'])
