@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
-# TODO: adjective conjugations
-# TODO: label haupt/nebensätzlich sections for verbs
 # TODO: alternative conjugations with labels for usage (hängen)
-# TODO: single command for definitions and conjugations
-
+# TODO: label haupt/nebensätzlich sections for verbs
+# TODO: allow filtering definitions by POS
+# TODO: print POS of definitions
+from argparse import ArgumentParser
 import requests
 import sys
 import time
-from tabulate import tabulate
+
 from bs4 import BeautifulSoup
+from tabulate import tabulate
 
 COUNTRY_CODES = {'de', 'en', 'fr', 'es', 'pt', 'ru'}
 LANGUAGES = {'fr': 'French', 'de': 'German', 'es': 'Spanish', 'en': 'English', 'ru': 'Russian', 'pt': 'Portuguese'}
-POS = {'n', 'v', 'adj'}
 
 TRANSLATE_URL = """http://dict.leo.org/dictQuery/m-vocab/%(lang)s/query.xml?tolerMode=nof&lp=%(lang)s&lang=de&rmWords=off&rmSearch=on&search=%(word)s&searchLoc=0&resultOrder=basic&multiwordShowSingle=on"""
 
@@ -66,15 +66,24 @@ def flecttab(word, lang, pos):
     if not entries:
         return
     tables = _get_tables(entries, pos)
-    for en, de, table in tables:
-        if table.find('verbtab') and (pos is None or pos == 'v'):
+    try:
+        next_table = next(tables)
+    except StopIteration:
+        return
+    while next_table is not None:
+        en, de, table = next_table
+        if table.find('verbtab') and pos in ['all', 'v']:
             yield _extract_verb(table, en, de)
-        elif table.find('nountab') and (pos is None or pos == 'n'):
+        elif table.find('nountab') and pos in ['all', 'n']:
             yield _extract_noun(table, en, de)
-        elif table.find('adjtab') and (pos is None or pos == 'adj'):
+        elif table.find('adjtab') and pos in ['all', 'adj']:
             yield _extract_adjective(table, en, de)
-        # TODO: adjectives
-        time.sleep(3)
+        try:
+            next_table = next(tables)
+            # give the website a break
+            time.sleep(3)
+        except StopIteration:
+            return
 
 def _extract_noun(table, en, de):
     noun = {'type': 'noun', 'en': en, 'de': de, 'moods': []}
@@ -233,71 +242,66 @@ def pairwise(it):
         y = next(it, None)
         yield x, y
 
-if __name__ == '__main__':
-    if len(sys.argv) == 1 or sys.argv[1] == 'help':
-        print(help_text)
-        sys.exit(0)
-
-    lang = 'ende'  # language
-    help_text = """Usage leo [language] phrase1 [phrase2] [phrase3] ...\n\n
-        \t language can be one of en, fr, es, pt, ru."""
-    pos = None
-    conj = False
-    arg_start_pos = 1
-    if sys.argv[arg_start_pos] in COUNTRY_CODES:
-        lang = sys.argv[arg_start_pos] + 'de'
-        arg_start_pos += 1
-
-    if sys.argv[arg_start_pos] == 'conj':
-        conj = True
-        arg_start_pos += 1
-
-    if sys.argv[arg_start_pos].lower() in POS:
-        pos = sys.argv[arg_start_pos].lower()
-        arg_start_pos += 1
-
-    phrases = [arg for arg in sys.argv[arg_start_pos:] if arg not in COUNTRY_CODES and arg not in POS]
-
-    # TODO: Run translation then conjugation immediately afterwards
-    if conj:
-        for word in phrases:
-            for table in flecttab(word, lang, pos):
-                print(table['en'] + "/" + table['de'])
-                if table['type'] == 'verb':
-                    print("Hilfsverb: " + table['aux'])
-                    for mood in table['moods']:
-                        print("===" + mood['name'] + "===")
-                        for x, y in pairwise(mood['tenses']):
-                            if y:
-                                print(tabulate({x['name']: x['cases'], y['name']: y['cases']}, headers='keys'))
-                            else:
-                                print(x['name'])
-                                print('-' * len(x['name']))
-                                print("\n".join(x['cases']))
-                elif table['type'] == 'noun':
-                    for mood in table['moods']:
-                        print("===" + mood['name'] + "===")
-                        for x, y in pairwise(mood['variants']):
-                            if y:
-                                x_string = tabulate(x['cases'])
-                                y_string = tabulate(y['cases'])
-                                print(tabulate({x['name']: x_string.split("\n"), y['name']: y_string.split("\n")}, headers='keys'))
-                            else:
-                                print(x['name'])
-                                print(tabulate(x['cases']))
-                elif table['type'] == 'adjective':
-                    for mood in table['moods']:
-                        print("===" + mood['name'] + "===")
-                        for variant in mood['variants']:
-                            print(variant['name'])
-                            print(tabulate(variant['cases']))
-                print()
+def _print_translations(args):
+    translation = translate(args['word'], args['lang'] + 'de')
+    if translation is None:
+        print('\tno translation found...')
     else:
-        translations = {word: translate(word, lang) for word in phrases}
-        for word in translations:
-            if len(translations) > 1:
-                print('\n%s:' % word)
-            if translations[word]:
-                print(tabulate(translations[word], headers=[LANGUAGES[lang[0:2]], 'German']))
-            else:
-                print('\tno translation found...')
+        print(tabulate(translation, headers=[LANGUAGES[args['lang']], 'German']))
+
+def _print_inflection_tables(args):
+    for table in flecttab(args['word'], args['lang'] + 'de', args['pos']):
+        print(table['en'] + "/" + table['de'])
+        if table['type'] == 'verb':
+            print("Hilfsverb: " + table['aux'])
+            for mood in table['moods']:
+                print("===" + mood['name'] + "===")
+                for x, y in pairwise(mood['tenses']):
+                    if y:
+                        print(tabulate({x['name']: x['cases'], y['name']: y['cases']}, headers='keys'))
+                    else:
+                        print(x['name'])
+                        print('-' * len(x['name']))
+                        print("\n".join(x['cases']))
+        elif table['type'] == 'noun':
+            for mood in table['moods']:
+                print("===" + mood['name'] + "===")
+                for x, y in pairwise(mood['variants']):
+                    if y:
+                        x_string = tabulate(x['cases'])
+                        y_string = tabulate(y['cases'])
+                        print(tabulate({x['name']: x_string.split("\n"), y['name']: y_string.split("\n")}, headers='keys'))
+                    else:
+                        print(x['name'])
+                        print(tabulate(x['cases']))
+        elif table['type'] == 'adjective':
+            for mood in table['moods']:
+                print("===" + mood['name'] + "===")
+                for variant in mood['variants']:
+                    print(variant['name'])
+                    print(tabulate(variant['cases']))
+        print()
+
+
+if __name__ == '__main__':
+    lang = 'ende'  # language
+    parser = ArgumentParser(description='Retrieve word information via the Leo website')
+    parser.add_argument("-l", "--lang", dest="lang", default='en',
+        choices=COUNTRY_CODES,
+        help="source language, 2 chars (e.g. 'en')")
+    parser.add_argument("-i", "--inflect",
+        action="store_true", dest="inflect", default=False,
+        help="print inflection tables for all homonyms; one table is printed every 3 seconds")
+    parser.add_argument("-p", "--pos", dest="pos", choices=['all', 'n', 'v', 'adj'],
+        default='all',
+        help="Part of speech of inflection tables to show.")
+    parser.add_argument("-d", "--define",
+        action="store_true", dest="define", default=False,
+        help="print dictionary definitions")
+    parser.add_argument('word')
+    args = vars(parser.parse_args())
+
+    if args['define']:
+        _print_translations(args)
+    if args['inflect']:
+        _print_inflection_tables(args)
