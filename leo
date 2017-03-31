@@ -12,15 +12,19 @@ import time
 from bs4 import BeautifulSoup
 from tabulate import tabulate
 
+TARGET_LANG = 'de'
+
 COUNTRY_CODES = {'de', 'en', 'fr', 'es', 'pt', 'ru'}
 LANGUAGES = {'fr': 'French', 'de': 'German', 'es': 'Spanish', 'en': 'English', 'ru': 'Russian', 'pt': 'Portuguese'}
+
+POS_CLI_TO_LEO = {'v': 'verb', 'n': 'noun'}
 
 TRANSLATE_URL = """http://dict.leo.org/dictQuery/m-vocab/%(lang)s/query.xml?tolerMode=nof&lp=%(lang)s&lang=de&rmWords=off&rmSearch=on&search=%(word)s&searchLoc=0&resultOrder=basic&multiwordShowSingle=on"""
 
 FLECTAB_URL = """https://dict.leo.org/dictQuery/m-vocab/ende/stemming.xml"""
 
-def translate(word, lang):
-    entries = _get_entries(word, lang)
+def translate(word, source_lang):
+    entries = _get_entries(word, source_lang)
     if not entries:
         return
 
@@ -51,33 +55,33 @@ def translate(word, lang):
 
     return parsed_entries
 
-def _get_entries(word, lang):
+def _get_entries(word, source_lang):
     r = requests.get(
         TRANSLATE_URL % {
-            'lang': lang,
+            'lang': source_lang + TARGET_LANG,
             'word': word
         }
     )
-    soup = BeautifulSoup(r.text, 'xml')
+    soup = BeautifulSoup(r.text, 'lxml')
     return soup.find_all('entry')
 
-def flecttab(word, lang, pos):
-    entries = _get_entries(word, lang)
+def flecttab(word, source_lang, pos):
+    entries = _get_entries(word, source_lang)
     if not entries:
         return
-    tables = _get_tables(entries, pos)
+    tables = _get_tables(entries, source_lang, pos)
     try:
         next_table = next(tables)
     except StopIteration:
         return
     while next_table is not None:
-        en, de, table = next_table
-        if table.find('verbtab') and pos in ['all', 'v']:
-            yield _extract_verb(table, en, de)
-        elif table.find('nountab') and pos in ['all', 'n']:
-            yield _extract_noun(table, en, de)
+        source, target, table = next_table
+        if table.find('verbtab') and pos in ['all', 'verb']:
+            yield _extract_verb(table, source, target)
+        elif table.find('nountab') and pos in ['all', 'noun']:
+            yield _extract_noun(table, source, target)
         elif table.find('adjtab') and pos in ['all', 'adj']:
-            yield _extract_adjective(table, en, de)
+            yield _extract_adjective(table, source, target)
         try:
             next_table = next(tables)
             # give the website a break
@@ -85,8 +89,8 @@ def flecttab(word, lang, pos):
         except StopIteration:
             return
 
-def _extract_noun(table, en, de):
-    noun = {'type': 'noun', 'en': en, 'de': de, 'moods': []}
+def _extract_noun(table, source, target):
+    noun = {'type': 'noun', 'source': source, 'target': target, 'moods': []}
     for mood in table.find_all('mood'):
         mood_struct = {'name': mood['title'], 'variants': []}
         for variant in mood.find_all('variant'):
@@ -111,8 +115,8 @@ def _format_noun_case(case):
     ending = case.find('ending').get_text()
     return {'name': case_name, 'value': (art.get_text() + ' ' if art else '') + radical + ending}
 
-def _extract_adjective(table, en, de):
-    noun = {'type': 'adjective', 'en': en, 'de': de, 'moods': []}
+def _extract_adjective(table, source, target):
+    noun = {'type': 'adjective', 'source': source, 'target': target, 'moods': []}
     for mood in table.find_all('mood'):
         mood_struct = {'name': mood['title'], 'variants': []}
         for variant in mood.find_all('variant'):
@@ -163,8 +167,8 @@ def _format_multiple_adjective_cases(case_name, radical, adj):
 
     return {'name': case_name, 'value': "/".join(cases)}
 
-def _extract_verb(table, en, de):
-    verb = {'type': 'verb', 'en': en, 'de': de, 'moods': []}
+def _extract_verb(table, source, target):
+    verb = {'type': 'verb', 'source': source, 'target': target, 'moods': []}
     aux = table.find('auxiliary')
     if aux:
         verb['aux'] = aux.get_text().strip()
@@ -204,30 +208,25 @@ def _format_verb_case(case):
         final += " " + spref.get_text()
     return final
 
-def _get_tables(entries, pos):
+def _get_tables(entries, source_lang, pos):
     keys = set()
     url2en = {}
     url2de = {}
     for entry in entries:
-        en = entry.find('side', lang='en').find('word')
-        en = en.get_text() if en else ''
-        de = entry.find('side', lang='de').find('word')
-        de = de.get_text() if de else ''
+        source = entry.find('side', lang=source_lang).find('word')
+        source = source.get_text() if source else ''
+        target = entry.find('side', lang=TARGET_LANG).find('word')
+        target = target.get_text() if target else ''
 
-        sides = entry.find_all('side', lang='de')
+        sides = entry.find_all('side', lang=TARGET_LANG)
         for side in sides:
             flecttab = side.find('flecttab')
             if flecttab:
-                if pos:
-                    if pos == 'adj' and flecttab['stemType'] != 'adj':
-                        continue
-                    elif pos == 'v' and flecttab['stemType'] != 'verb':
-                        continue
-                    elif pos == 'n' and flecttab['stemType'] != 'noun':
-                        continue
+                if pos != 'all' and pos != flecttab['stemtype']:
+                    continue
                 url = flecttab['url']
-                url2en[url] = en
-                url2de[url] = de
+                url2en[url] = source
+                url2de[url] = target
                 keys.add(url)
 
     for key in keys:
@@ -243,15 +242,15 @@ def pairwise(it):
         yield x, y
 
 def _print_translations(args):
-    translation = translate(args['word'], args['lang'] + 'de')
+    translation = translate(args['word'], args['source_lang'])
     if translation is None:
         print('\tno translation found...')
     else:
-        print(tabulate(translation, headers=[LANGUAGES[args['lang']], 'German']))
+        print(tabulate(translation, headers=[LANGUAGES[args['source_lang']], 'German']))
 
 def _print_inflection_tables(args):
-    for table in flecttab(args['word'], args['lang'] + 'de', args['pos']):
-        print(table['en'] + "/" + table['de'])
+    for table in flecttab(args['word'], args['source_lang'], args['pos']):
+        print(table['source'] + "/" + table['target'])
         if table['type'] == 'verb':
             print("Hilfsverb: " + table['aux'])
             for mood in table['moods']:
@@ -286,7 +285,7 @@ def _print_inflection_tables(args):
 if __name__ == '__main__':
     lang = 'ende'  # language
     parser = ArgumentParser(description='Retrieve word information via the Leo website')
-    parser.add_argument("-l", "--lang", dest="lang", default='en',
+    parser.add_argument("-sl", "--source_lang", dest="source_lang", default='en',
         choices=COUNTRY_CODES,
         help="source language, 2 chars (e.g. 'en')")
     parser.add_argument("-i", "--inflect",
@@ -300,6 +299,8 @@ if __name__ == '__main__':
         help="print dictionary definitions")
     parser.add_argument('word')
     args = vars(parser.parse_args())
+    if args['pos']:
+        args['pos'] = POS_CLI_TO_LEO[args['pos']] if args['pos'] in POS_CLI_TO_LEO else args['pos']
 
     if args['define']:
         _print_translations(args)
