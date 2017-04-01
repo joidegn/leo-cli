@@ -295,7 +295,7 @@ def _print_inflection_table(table):
 if __name__ == '__main__':
     lang = 'ende'  # language
     parser = ArgumentParser(description='Retrieve word information via the Leo website')
-    parser.add_argument("-sl", "--source_lang", dest="source_lang", default='en',
+    parser.add_argument("-l", "--lang", dest="source_lang", default='en',
         choices=COUNTRY_CODES,
         help="source language, 2 chars (e.g. 'en')")
     parser.add_argument("-i", "--inflect",
