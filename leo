@@ -238,7 +238,7 @@ def _get_tables(entries):
     langs = set()
     for entry in entries:
         for side in entry['sides']:
-            if not side['inflect_url']:
+            if not side['inflect_url'] or side['lang'] != TARGET_LANG:
                 continue
             langs.add(side['lang'])
             url2lang[side['inflect_url']][side['lang']] = side['word']
