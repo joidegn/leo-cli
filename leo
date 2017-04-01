@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
+# TODO: re-use translate data for tabulate command
+# TODO: print POS of definitions
+# TODO: allow filtering definitions by POS
 # TODO: alternative conjugations with labels for usage (hängen)
 # TODO: label haupt/nebensätzlich sections for verbs
-# TODO: allow filtering definitions by POS
-# TODO: print POS of definitions
 from argparse import ArgumentParser
 import requests
 import sys
@@ -234,53 +235,46 @@ def _get_tables(entries, source_lang, pos):
         table = BeautifulSoup(r.text, 'xml')
         yield (url2en[key], url2de[key], table)
 
-def pairwise(it):
+def _pairwise(it):
     it = iter(it)
     while True:
         x = next(it)
         y = next(it, None)
         yield x, y
 
-def _print_translations(args):
-    translation = translate(args['word'], args['source_lang'])
-    if translation is None:
-        print('\tno translation found...')
-    else:
-        print(tabulate(translation, headers=[LANGUAGES[args['source_lang']], 'German']))
+def _print_translation(translation):
+    print(tabulate(translation, headers=[LANGUAGES[args['source_lang']], 'German']))
 
-def _print_inflection_tables(args):
-    for table in flecttab(args['word'], args['source_lang'], args['pos']):
-        print(table['source'] + "/" + table['target'])
-        if table['type'] == 'verb':
-            print("Hilfsverb: " + table['aux'])
-            for mood in table['moods']:
-                print("===" + mood['name'] + "===")
-                for x, y in pairwise(mood['tenses']):
-                    if y:
-                        print(tabulate({x['name']: x['cases'], y['name']: y['cases']}, headers='keys'))
-                    else:
-                        print(x['name'])
-                        print('-' * len(x['name']))
-                        print("\n".join(x['cases']))
-        elif table['type'] == 'noun':
-            for mood in table['moods']:
-                print("===" + mood['name'] + "===")
-                for x, y in pairwise(mood['variants']):
-                    if y:
-                        x_string = tabulate(x['cases'])
-                        y_string = tabulate(y['cases'])
-                        print(tabulate({x['name']: x_string.split("\n"), y['name']: y_string.split("\n")}, headers='keys'))
-                    else:
-                        print(x['name'])
-                        print(tabulate(x['cases']))
-        elif table['type'] == 'adjective':
-            for mood in table['moods']:
-                print("===" + mood['name'] + "===")
-                for variant in mood['variants']:
-                    print(variant['name'])
-                    print(tabulate(variant['cases']))
-        print()
-
+def _print_inflection_table(table):
+    print(table['source'] + "/" + table['target'])
+    if table['type'] == 'verb':
+        print("Hilfsverb: " + table['aux'])
+        for mood in table['moods']:
+            print("===" + mood['name'] + "===")
+            for x, y in _pairwise(mood['tenses']):
+                if y:
+                    print(tabulate({x['name']: x['cases'], y['name']: y['cases']}, headers='keys'))
+                else:
+                    print(x['name'])
+                    print('-' * len(x['name']))
+                    print("\n".join(x['cases']))
+    elif table['type'] == 'noun':
+        for mood in table['moods']:
+            print("===" + mood['name'] + "===")
+            for x, y in _pairwise(mood['variants']):
+                if y:
+                    x_string = tabulate(x['cases'])
+                    y_string = tabulate(y['cases'])
+                    print(tabulate({x['name']: x_string.split("\n"), y['name']: y_string.split("\n")}, headers='keys'))
+                else:
+                    print(x['name'])
+                    print(tabulate(x['cases']))
+    elif table['type'] == 'adjective':
+        for mood in table['moods']:
+            print("===" + mood['name'] + "===")
+            for variant in mood['variants']:
+                print(variant['name'])
+                print(tabulate(variant['cases']))
 
 if __name__ == '__main__':
     lang = 'ende'  # language
@@ -303,6 +297,19 @@ if __name__ == '__main__':
         args['pos'] = POS_CLI_TO_LEO[args['pos']] if args['pos'] in POS_CLI_TO_LEO else args['pos']
 
     if args['define']:
-        _print_translations(args)
+        translation = translate(args['word'], args['source_lang'])
+        if translation is not None:
+            _print_translation(translation)
+        else:
+            print('\tNo translation found')
+        print()
     if args['inflect']:
-        _print_inflection_tables(args)
+        if args['define']:
+            time.sleep(3)
+        tables = flecttab(args['word'], args['source_lang'], args['pos'])
+        table_count = 0
+        for table in tables:
+            _print_inflection_table(table)
+            print()
+        if table_count == 0:
+            print("\tNo inflection tables found")
