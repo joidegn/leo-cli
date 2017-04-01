@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
-# TODO: print non-German plurals in translate command
-# TODO: print POS of definitions
+# TODO: print non-German plurals
 # TODO: allow specifying target and source languages separately
-# TODO: don't print conjugation labels in translation header for conjugations
+# TODO: (maybe) don't print conjugation labels in translation header for conjugations
 # TODO: alternative conjugations with labels for usage (hängen)
 # TODO: label haupt/nebensätzlich sections for verbs
 from argparse import ArgumentParser
@@ -114,7 +113,7 @@ def inflect(entries):
             return
 
 def _extract_noun(table, translations):
-    noun = {'type': 'noun', 'translations': translations, 'moods': []}
+    noun = {'pos': 'noun', 'translations': translations, 'moods': []}
     for mood in table.find_all('mood'):
         mood_struct = {'name': mood['title'], 'variants': []}
         for variant in mood.find_all('variant'):
@@ -140,7 +139,7 @@ def _format_noun_case(case):
     return {'name': case_name, 'value': (art.get_text() + ' ' if art else '') + radical + ending}
 
 def _extract_adjective(table, translations):
-    noun = {'type': 'adjective', 'translations': translations, 'moods': []}
+    noun = {'pos': 'adjective', 'translations': translations, 'moods': []}
     for mood in table.find_all('mood'):
         mood_struct = {'name': mood['title'], 'variants': []}
         for variant in mood.find_all('variant'):
@@ -192,7 +191,7 @@ def _format_multiple_adjective_cases(case_name, radical, adj):
     return {'name': case_name, 'value': "/".join(cases)}
 
 def _extract_verb(table, translations):
-    verb = {'type': 'verb', 'translations': translations, 'moods': []}
+    verb = {'pos': 'verb', 'translations': translations, 'moods': []}
     aux = table.find('auxiliary')
     if aux:
         verb['aux'] = aux.get_text().strip()
@@ -233,21 +232,19 @@ def _format_verb_case(case):
     return final
 
 def _get_tables(entries):
-    keys = set()
-    url2lang = defaultdict(dict)
+    url2translations = {}
     langs = set()
     for entry in entries:
-        for side in entry['sides']:
-            if not side['inflect_url'] or side['lang'] != TARGET_LANG:
-                continue
-            langs.add(side['lang'])
-            url2lang[side['inflect_url']][side['lang']] = side['word']
-            keys.add(side['inflect_url'])
+        target_side = next((side for side in entry['sides'] if side["lang"] == TARGET_LANG))
+        url = target_side['inflect_url']
+        if url is None or url in url2translations:
+            continue
+        translations = [side['word'] for side in entry['sides']]
+        url2translations[url] = translations
 
-    for key in keys:
-        r = requests.get(FLECTAB_URL + key)
+    for url, translations in url2translations.items():
+        r = requests.get(FLECTAB_URL + url)
         table = BeautifulSoup(r.text, 'xml')
-        translations = [url2lang[key][lang] for lang in langs if lang in url2lang[key]]
         yield (translations, table)
 
 def _pairwise(it):
@@ -265,7 +262,8 @@ def _print_translation(translation):
 
 def _print_inflection_table(table):
     print("/".join(table['translations']))
-    if table['type'] == 'verb':
+    print(table['pos'].title())
+    if table['pos'] == 'verb':
         print("Hilfsverb: " + table['aux'])
         for mood in table['moods']:
             print("===" + mood['name'] + "===")
@@ -276,7 +274,7 @@ def _print_inflection_table(table):
                     print(x['name'])
                     print('-' * len(x['name']))
                     print("\n".join(x['cases']))
-    elif table['type'] == 'noun':
+    elif table['pos'] == 'noun':
         for mood in table['moods']:
             print("===" + mood['name'] + "===")
             for x, y in _pairwise(mood['variants']):
@@ -287,7 +285,7 @@ def _print_inflection_table(table):
                 else:
                     print(x['name'])
                     print(tabulate(x['cases']))
-    elif table['type'] == 'adjective':
+    elif table['pos'] == 'adjective':
         for mood in table['moods']:
             print("===" + mood['name'] + "===")
             for variant in mood['variants']:
@@ -302,10 +300,10 @@ if __name__ == '__main__':
         help="source language, 2 chars (e.g. 'en')")
     parser.add_argument("-i", "--inflect",
         action="store_true", dest="inflect", default=False,
-        help="print inflection tables for all homonyms; one table is printed every 3 seconds")
+        help="print inflection tables for all homonyms")
     parser.add_argument("-p", "--pos", dest="pos", choices=['all', 'n', 'v', 'adj'],
         default='all',
-        help="Part of speech of inflection tables to show.")
+        help="Part of speech of words to translate/inflect.")
     parser.add_argument("-d", "--define",
         action="store_true", dest="define", default=False,
         help="print dictionary definitions")
