@@ -31,7 +31,7 @@ class LeoRequestManager:
         if self.recentlySent:
             if verbose:
                 print("Pausing between requests to LEO server...")
-            time.sleep(3)
+            time.sleep(1)
         self.recentlySent = True
         r = requests.get(url)
         soup = BeautifulSoup(r.text, 'lxml')
