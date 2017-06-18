@@ -13,7 +13,10 @@ try:
     from tabulate import tabulate
 except KeyboardInterrupt as error:
     # interrupted by the user
-    exit()
+    if __name__ == '__main__'
+        exit()
+    else:
+        raise error
 
 TARGET_LANG = 'de'
 
