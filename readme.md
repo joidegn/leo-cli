@@ -10,8 +10,10 @@ leo-cli is a command line tool which can be used to translate words or phrases f
 ##Installation
 ===================
 This tool requires beatiful soup, the wonderful requests library and the tabulate library.
-###install beautifulsoup, requests and tabulate
-pip install beautifulsoup4 requests tabulate
+
+###install dependencies
+
+pip install -r requirements.txt
 
 ###install leo-cli
 pip install leo-cli
