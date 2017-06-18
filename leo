@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 
-# TODO: print non-German plurals
-# TODO: allow specifying target and source languages separately
-# TODO: (maybe) don't print conjugation labels in translation header for conjugations
-# TODO: alternative conjugations with labels for usage (hängen)
-# TODO: label haupt/nebensätzlich sections for verbs
 from argparse import ArgumentParser
 from collections import defaultdict
 import requests
@@ -306,9 +301,13 @@ if __name__ == '__main__':
         help="Part of speech of words to translate/inflect.")
     parser.add_argument("-d", "--define",
         action="store_true", dest="define", default=False,
-        help="print dictionary definitions")
+        help="print dictionary definitions. True by default if -i is not specified.")
     parser.add_argument('word')
     args = vars(parser.parse_args())
+
+    if not args['inflect']:
+        args['define'] = True
+
     if args['pos']:
         args['pos'] = POS_CLI_TO_LEO[args['pos']] if args['pos'] in POS_CLI_TO_LEO else args['pos']
 
