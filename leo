@@ -20,8 +20,27 @@ TRANSLATE_URL = """http://dict.leo.org/dictQuery/m-vocab/%(lang)s/query.xml?tole
 
 FLECTAB_URL = """https://dict.leo.org/dictQuery/m-vocab/ende/stemming.xml"""
 
-def get_entries(word, source_lang, pos_filter):
-    entries = _retrieve_translation_doc(word, source_lang).find_all('entry')
+class LeoRequestManager:
+    def __init__(self):
+        self.recentlySent = False
+    def get_xml(self, url, verbose=False):
+        """Returns soup object (xml parsed with lxml)
+        If another request has been sent previously, this pauses for 3 seconds
+        before sending this one. This is to be polite to the Leo website (and
+        avoid possible banning)."""
+        if self.recentlySent:
+            if verbose:
+                print("Pausing between requests to LEO server...")
+            time.sleep(3)
+        self.recentlySent = True
+        r = requests.get(url)
+        soup = BeautifulSoup(r.text, 'lxml')
+        return soup
+
+requestManager = LeoRequestManager()
+
+def get_entries(word, source_lang, pos_filter, verbose=False):
+    entries = _retrieve_translation_doc(word, source_lang, verbose=verbose).find_all('entry')
     if not entries:
         return
 
@@ -73,21 +92,17 @@ def _validate_pos(pos_filter, pos):
         return pos
     return None
 
-def _retrieve_translation_doc(word, source_lang):
-    r = requests.get(
-        TRANSLATE_URL % {
+def _retrieve_translation_doc(word, source_lang, verbose=False):
+    url = TRANSLATE_URL % {
             'lang': source_lang + TARGET_LANG,
             'word': word
         }
-    )
+    return requestManager.get_xml(url, verbose=verbose)
 
-    soup = BeautifulSoup(r.text, 'lxml')
-    return soup
-
-def inflect(entries):
+def inflect(entries, verbose=False):
     if not entries:
         return
-    tables = _get_tables(entries)
+    tables = _get_tables(entries, verbose=verbose)
     try:
         next_table = next(tables)
     except StopIteration:
@@ -102,8 +117,6 @@ def inflect(entries):
             yield _extract_adjective(table, translations)
         try:
             next_table = next(tables)
-            # give the website a break
-            time.sleep(3)
         except StopIteration:
             return
 
@@ -226,7 +239,7 @@ def _format_verb_case(case):
         final += " " + spref.get_text()
     return final
 
-def _get_tables(entries):
+def _get_tables(entries, verbose=False):
     url2translations = {}
     langs = set()
     for entry in entries:
@@ -238,8 +251,8 @@ def _get_tables(entries):
         url2translations[url] = translations
 
     for url, translations in url2translations.items():
-        r = requests.get(FLECTAB_URL + url)
-        table = BeautifulSoup(r.text, 'xml')
+        table_url = FLECTAB_URL + url
+        table = requestManager.get_xml(table_url, verbose=verbose)
         yield (translations, table)
 
 def _pairwise(it):
@@ -290,6 +303,7 @@ def _print_inflection_table(table):
 if __name__ == '__main__':
     lang = 'ende'  # language
     parser = ArgumentParser(description='Retrieve word information via the Leo website')
+    parser.add_argument('words', nargs='+', help="the words to look up on the LEO website")
     parser.add_argument("-l", "--lang", dest="source_lang", default='en',
         choices=COUNTRY_CODES,
         help="source language, 2 chars (e.g. 'en')")
@@ -302,7 +316,8 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--define",
         action="store_true", dest="define", default=False,
         help="print dictionary definitions. True by default if -i is not specified.")
-    parser.add_argument('words', nargs='+')
+    parser.add_argument("-v", "--verbose",
+        action="store_true", dest="verbose", default=False, help="Print debug messages")
     args = vars(parser.parse_args())
 
     if not args['inflect']:
@@ -313,25 +328,21 @@ if __name__ == '__main__':
 
     if args['define']:
         for word in args['words']:
-            entries = get_entries(word, args['source_lang'], args['pos'])
+            entries = get_entries(word, args['source_lang'], args['pos'], verbose=args['verbose'])
             if entries is not None:
                 _print_translation(entries)
             else:
                 print('\tNo translations found')
             print()
     if args['inflect']:
-        # pause between requests to the leo website
-        if args['define']:
-            time.sleep(3)
-        else:
-            for word in args['words']:
-                entries = get_entries(word, args['source_lang'], args['pos'])
-        tables = inflect(entries)
+        for word in args['words']:
+            entries = get_entries(word, args['source_lang'], args['pos'], verbose=args['verbose'])
+            tables = inflect(entries, verbose=args['verbose'])
 
-        table_count = 0
-        for table in tables:
-            table_count += 1
-            _print_inflection_table(table)
-            print()
-        if table_count == 0:
-            print("\tNo inflection tables found")
+            table_count = 0
+            for table in tables:
+                table_count += 1
+                _print_inflection_table(table)
+                print()
+            if table_count == 0:
+                print("\tNo inflection tables found for " + word)
