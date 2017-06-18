@@ -21,6 +21,24 @@ There has been a layout change on leo.org so you might have to
 pip install leo-cli --upgrade
 
 ##usage:
+
+    leo -h
+    usage: leo [-h] [-l {en,pt,fr,de,es,ru}] [-i] [-p {all,n,v,adj}] [-d] [-v]
+               words [words ...]
+    Retrieve word information via the Leo website
+    positional arguments:
+      words                 the words to look up on the LEO website
+    optional arguments:
+      -h, --help            show this help message and exit
+      -l {en,pt,fr,de,es,ru}, --lang {en,pt,fr,de,es,ru}
+                            source language, 2 chars (e.g. 'en')
+      -i, --inflect         print inflection tables for all homonyms
+      -p {all,n,v,adj}, --pos {all,n,v,adj}
+                            Part of speech of words to translate/inflect.
+      -d, --define          print dictionary definitions. True by default if -i is
+                            not specified.
+      -v, --verbose         Print debug messages
+
 ===================
 leo example
 
@@ -34,7 +52,9 @@ leo -l ru книга
 
 leo -l pt ação
 
-leo -i haengen
+leo -i reden
+
+leo -i -p n reden
 
 ## TODO
 * print non-German plurals
