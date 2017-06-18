@@ -26,8 +26,19 @@ leo example
 
 leo another example
 
-leo fr bonne gout
+leo "hang out"
 
-leo ru книга
+leo -l fr bonne gout
 
-leo pt ação
+leo -l ru книга
+
+leo -l pt ação
+
+leo -i haengen
+
+## TODO
+* print non-German plurals
+* allow specifying target and source languages separately
+* (maybe) don't print conjugation labels in translation header for conjugations
+* alternative conjugations with labels for usage (hängen)
+* label haupt/nebensätzlich sections for verbs

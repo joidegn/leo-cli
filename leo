@@ -302,7 +302,7 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--define",
         action="store_true", dest="define", default=False,
         help="print dictionary definitions. True by default if -i is not specified.")
-    parser.add_argument('word')
+    parser.add_argument('words', nargs='+')
     args = vars(parser.parse_args())
 
     if not args['inflect']:
@@ -312,17 +312,20 @@ if __name__ == '__main__':
         args['pos'] = POS_CLI_TO_LEO[args['pos']] if args['pos'] in POS_CLI_TO_LEO else args['pos']
 
     if args['define']:
-        entries = get_entries(args['word'], args['source_lang'], args['pos'])
-        if entries is not None:
-            _print_translation(entries)
-        else:
-            print('\tNo translations found')
-        print()
+        for word in args['words']:
+            entries = get_entries(word, args['source_lang'], args['pos'])
+            if entries is not None:
+                _print_translation(entries)
+            else:
+                print('\tNo translations found')
+            print()
     if args['inflect']:
+        # pause between requests to the leo website
         if args['define']:
             time.sleep(3)
         else:
-            entries = get_entries(args['word'], args['source_lang'], args['pos'])
+            for word in args['words']:
+                entries = get_entries(word, args['source_lang'], args['pos'])
         tables = inflect(entries)
 
         table_count = 0
