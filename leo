@@ -2,14 +2,18 @@
 
 from __future__ import print_function
 
-from argparse import ArgumentParser
-from collections import defaultdict
-import requests
-import sys
-import time
+try:
+    from argparse import ArgumentParser
+    from collections import defaultdict
+    import requests
+    import sys
+    import time
 
-from bs4 import BeautifulSoup
-from tabulate import tabulate
+    from bs4 import BeautifulSoup
+    from tabulate import tabulate
+except KeyboardInterrupt as error:
+    # interrupted by the user
+    exit()
 
 TARGET_LANG = 'de'
 
@@ -328,23 +332,28 @@ if __name__ == '__main__':
     if args['pos']:
         args['pos'] = POS_CLI_TO_LEO[args['pos']] if args['pos'] in POS_CLI_TO_LEO else args['pos']
 
-    if args['define']:
-        for word in args['words']:
-            entries = get_entries(word, args['source_lang'], args['pos'], verbose=args['verbose'])
-            if entries is not None:
-                _print_translation(entries)
-            else:
-                print('\tNo translations found')
-            print()
-    if args['inflect']:
-        for word in args['words']:
-            entries = get_entries(word, args['source_lang'], args['pos'], verbose=args['verbose'])
-            tables = inflect(entries, verbose=args['verbose'])
-
-            table_count = 0
-            for table in tables:
-                table_count += 1
-                _print_inflection_table(table)
+    try:
+        if args['define']:
+            for word in args['words']:
+                entries = get_entries(word, args['source_lang'], args['pos'], verbose=args['verbose'])
+                if entries is not None:
+                    _print_translation(entries)
+                else:
+                    print('\tNo translations found')
                 print()
-            if table_count == 0:
-                print("\tNo inflection tables found for " + word)
+        if args['inflect']:
+            for word in args['words']:
+                entries = get_entries(word, args['source_lang'], args['pos'], verbose=args['verbose'])
+                tables = inflect(entries, verbose=args['verbose'])
+
+                table_count = 0
+                for table in tables:
+                    table_count += 1
+                    _print_inflection_table(table)
+                    print()
+                if table_count == 0:
+                    print("\tNo inflection tables found for " + word)
+    except KeyboardInterrupt as error:
+        if args['verbose']:
+            print("Interrupted by user")
+            exit()
