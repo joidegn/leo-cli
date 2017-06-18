@@ -2,18 +2,25 @@
 
 from __future__ import print_function
 
+import sys
+
+user_interrupt_errors = (KeyboardInterrupt,)
+if sys.version_info[0] == 3:
+    user_interrupt_errors += (BrokenPipeError,)
+else:
+    user_interrupt_errors += (IOError,)
+
 try:
     from argparse import ArgumentParser
     from collections import defaultdict
     import requests
-    import sys
     import time
 
     from bs4 import BeautifulSoup
     from tabulate import tabulate
-except KeyboardInterrupt as error:
+except user_interrupt_errors as error:
     # interrupted by the user
-    if __name__ == '__main__'
+    if __name__ == '__main__':
         exit()
     else:
         raise error
@@ -343,7 +350,9 @@ if __name__ == '__main__':
                     _print_translation(entries)
                 else:
                     print('\tNo translations found')
-                print()
+                if args['inflect']:
+                    print()
+                sys.stdout.flush()
         if args['inflect']:
             for word in args['words']:
                 entries = get_entries(word, args['source_lang'], args['pos'], verbose=args['verbose'])
@@ -354,9 +363,10 @@ if __name__ == '__main__':
                     table_count += 1
                     _print_inflection_table(table)
                     print()
+                    sys.stdout.flush()
                 if table_count == 0:
                     print("\tNo inflection tables found for " + word)
-    except KeyboardInterrupt as error:
+    except user_interrupt_errors as error:
         if args['verbose']:
             print("Interrupted by user")
             exit()
