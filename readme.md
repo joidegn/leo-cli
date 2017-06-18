@@ -41,22 +41,16 @@ pip install leo-cli --upgrade
                             not specified.
       -v, --verbose         Print debug messages
 
-===================
-leo example
+###Examples
 
-leo another example
-
-leo "hang out"
-
-leo -l fr bonne gout
-
-leo -l ru книга
-
-leo -l pt ação
-
-leo -i reden
-
-leo -i -p n reden
+    leo example
+    leo another example
+    leo "hang out"
+    leo -l fr bonne gout
+    leo -l ru книга
+    leo -l pt ação
+    leo -i reden
+    leo ii -p n reden
 
 ## TODO
 * print non-German plurals
