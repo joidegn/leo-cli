@@ -10,8 +10,10 @@ leo-cli is a command line tool which can be used to translate words or phrases f
 ##Installation
 ===================
 This tool requires beatiful soup, the wonderful requests library and the tabulate library.
-###install beautifulsoup, requests and tabulate
-pip install beautifulsoup4 requests tabulate
+
+###install dependencies
+
+pip install -r requirements.txt
 
 ###install leo-cli
 pip install leo-cli
@@ -21,13 +23,38 @@ There has been a layout change on leo.org so you might have to
 pip install leo-cli --upgrade
 
 ##usage:
-===================
-leo example
 
-leo another example
+    leo -h
+    usage: leo [-h] [-l {en,pt,fr,de,es,ru}] [-i] [-p {all,n,v,adj}] [-d] [-v]
+               words [words ...]
+    Retrieve word information via the Leo website
+    positional arguments:
+      words                 the words to look up on the LEO website
+    optional arguments:
+      -h, --help            show this help message and exit
+      -l {en,pt,fr,de,es,ru}, --lang {en,pt,fr,de,es,ru}
+                            source language, 2 chars (e.g. 'en')
+      -i, --inflect         print inflection tables for all homonyms
+      -p {all,n,v,adj}, --pos {all,n,v,adj}
+                            Part of speech of words to translate/inflect.
+      -d, --define          print dictionary definitions. True by default if -i is
+                            not specified.
+      -v, --verbose         Print debug messages
 
-leo fr bonne gout
+###Examples
 
-leo ru книга
+    leo example
+    leo another example
+    leo "hang out"
+    leo -l fr bonne gout
+    leo -l ru книга
+    leo -l pt ação
+    leo -i reden
+    leo ii -p n reden
 
-leo pt ação
+## TODO
+* print non-German plurals
+* allow specifying target and source languages separately
+* (maybe) don't print conjugation labels in translation header for conjugations
+* alternative conjugations with labels for usage (hängen)
+* label haupt/nebensätzlich sections for verbs
