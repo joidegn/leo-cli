@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='leo-cli',
-    version='0.3.4',
+    version='0.3.5',
     description='leo.org command line tool',
     author='Johannes Degn',
     author_email='j@degn.de',
