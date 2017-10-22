@@ -50,6 +50,8 @@ class LeoRequestManager:
                       file=sys.stderr)
             time.sleep(1)
         self.recentlySent = True
+        if verbose:
+            print('Requesting URL: %s' % url, file=sys.stderr)
         r = requests.get(url)
         soup = BeautifulSoup(r.text, 'lxml')
         return soup
