@@ -32,7 +32,7 @@ LANGUAGES = {'fr': 'French', 'de': 'German', 'es': 'Spanish', 'en': 'English', '
 
 POS_CLI_TO_LEO = {'v': 'verb', 'n': 'noun', 'adj': 'adjective'}
 
-TRANSLATE_URL = """http://dict.leo.org/dictQuery/m-vocab/%(lang)s/query.xml?tolerMode=nof&lp=%(lang)s&lang=de&rmWords=off&rmSearch=on&search=%(word)s&searchLoc=0&resultOrder=basic&multiwordShowSingle=on"""
+TRANSLATE_URL = 'https://dict.leo.org/dictQuery/m-vocab/%(lang)s/query.xml?tolerMode=nof&lp=%(lang)s&lang=de&rmWords=off&rmSearch=on&search=%(word)s&searchLoc=0&resultOrder=basic&multiwordShowSingle=on'
 
 FLECTAB_URL = """https://dict.leo.org/dictQuery/m-vocab/ende/stemming.xml"""
 
