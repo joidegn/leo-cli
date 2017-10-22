@@ -1,4 +1,0 @@
-bs4
-lxml>=3.0.0
-requests>=2.0.0
-tabulate>=0.7.7
