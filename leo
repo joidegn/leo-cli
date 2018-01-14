@@ -107,12 +107,13 @@ def _parse_entries(xml, pos_filter):
 def _parse_similar(xml):
     parsed_similar = {}
     similar = xml.find('similar')
-    for side in similar.find_all('side'):
-        lang = LANGUAGES.get(side['lang'], side['lang'])
-        words = []
-        for word in side.find_all('word'):
-            words.append(word.get_text())
-        parsed_similar[lang] = words
+    if similar:
+        for side in similar.find_all('side'):
+            lang = LANGUAGES.get(side['lang'], side['lang'])
+            words = []
+            for word in side.find_all('word'):
+                words.append(word.get_text())
+            parsed_similar[lang] = words
     return parsed_similar
 
 
