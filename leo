@@ -113,7 +113,8 @@ def _parse_similar(xml):
             words = []
             for word in side.find_all('word'):
                 words.append(word.get_text())
-            parsed_similar[lang] = words
+            if words:
+                parsed_similar[lang] = words
     return parsed_similar
 
 
