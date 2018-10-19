@@ -10,7 +10,7 @@ setup(name='leo-cli',
     license="MIT",
     url='https://github.com/JoiDegn/leo-cli',
     scripts=['leo'],
-    install_requires=['beautifulsoup4>=4.3.0', 'requests>=1.2.3', 'tabulate'],
+    install_requires=['beautifulsoup4>=4.3.0', 'lxml>=3.0', 'requests>=1.2.3', 'tabulate'],
     classifiers = [
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
