@@ -46,9 +46,12 @@ class LeoRequestManager:
         avoid possible banning)."""
         if self.recentlySent:
             if verbose:
-                print("Pausing between requests to LEO server...")
+                print('Pausing between requests to LEO server...',
+                      file=sys.stderr)
             time.sleep(1)
         self.recentlySent = True
+        if verbose:
+            print('Requesting URL: %s' % url, file=sys.stderr)
         r = requests.get(url)
         soup = BeautifulSoup(r.text, 'lxml')
         return soup
@@ -368,5 +371,5 @@ if __name__ == '__main__':
                     print("\tNo inflection tables found for " + word)
     except user_interrupt_errors as error:
         if args['verbose']:
-            print("Interrupted by user")
+            print("Interrupted by user", file=sys.stderr)
             exit()
