@@ -13,6 +13,11 @@ else:
 try:
     from argparse import ArgumentParser
     from collections import defaultdict
+    # python 2 only
+    try:
+        import itertools.izip as zip
+    except ImportError:
+        pass
     import requests
     import time
 
@@ -180,7 +185,8 @@ def _format_noun_case(case):
     art = case.find('art')
     radical = case.find('radical')
     radical = radical.get_text() if radical else ''
-    ending = case.find('ending').get_text()
+    ending = case.find('ending')
+    ending = ending.get_text() if ending else ''
     return {'name': case_name, 'value': (art.get_text() + ' ' if art else '') + radical + ending}
 
 def _extract_adjective(table, translations):
@@ -292,12 +298,8 @@ def _get_tables(entries, verbose=False):
         table = requestManager.get_xml(table_url, verbose=verbose)
         yield (translations, table)
 
-def _pairwise(it):
-    it = iter(it)
-    while True:
-        x = next(it)
-        y = next(it, None)
-        yield x, y
+def _pairwise(l):
+    return zip(l[0::2], l[1::2])
 
 def _print_translation(translation):
     word_table = []
