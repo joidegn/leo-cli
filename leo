@@ -45,7 +45,7 @@ class LeoRequestManager:
     def __init__(self):
         self.recentlySent = False
     def get_xml(self, url, verbose=False):
-        """Returns soup object (xml parsed with lxml)
+        """Returns soup object (xml parsed with html.parser)
         If another request has been sent previously, this pauses for 3 seconds
         before sending this one. This is to be polite to the Leo website (and
         avoid possible banning)."""
