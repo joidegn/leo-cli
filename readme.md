@@ -1,5 +1,4 @@
-#leo-cli
-===================
+# leo-cli
 
 leo-cli is a command line tool which can be used to translate words or phrases from several languages to german. It uses the open dictionary [dict.leo.org][]. I wrote this because visiting their website, choosing the language, typing the word and clicking the submit button required several too many steps. I am a lazy person.
 
@@ -7,18 +6,17 @@ leo-cli is a command line tool which can be used to translate words or phrases f
 
 
 
-##Installation
-===================
+## Installation
 This tool requires beatiful soup, the wonderful requests library and the tabulate library.
 
-###install leo-cli
+### Install leo-cli
 pip install leo-cli
 
-###update
+### Update
 There has been a layout change on leo.org so you might have to 
 pip install leo-cli --upgrade
 
-##usage:
+## Usage:
 
     leo -h
     usage: leo [-h] [-l {en,pt,fr,de,es,ru}] [-i] [-p {all,n,v,adj}] [-d] [-v]
@@ -37,7 +35,7 @@ pip install leo-cli --upgrade
                             not specified.
       -v, --verbose         Print debug messages
 
-###Examples
+### Examples
 
     leo example
     leo another example
