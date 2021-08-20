@@ -321,32 +321,7 @@ def _print_inflection_table(table):
                 print(variant['name'])
                 print(tabulate(variant['cases']))
 
-if __name__ == '__main__':
-    lang = 'ende'  # language
-    parser = ArgumentParser(description='Retrieve word information via the Leo website')
-    parser.add_argument('words', nargs='+', help="the words to look up on the LEO website")
-    parser.add_argument("-l", "--lang", dest="source_lang", default='en',
-        choices=COUNTRY_CODES,
-        help="source language, 2 chars (e.g. 'en')")
-    parser.add_argument("-i", "--inflect",
-        action="store_true", dest="inflect", default=False,
-        help="print inflection tables for all homonyms")
-    parser.add_argument("-p", "--pos", dest="pos", choices=['all', 'n', 'v', 'adj'],
-        default='all',
-        help="Part of speech of words to translate/inflect.")
-    parser.add_argument("-d", "--define",
-        action="store_true", dest="define", default=False,
-        help="print dictionary definitions. True by default if -i is not specified.")
-    parser.add_argument("-v", "--verbose",
-        action="store_true", dest="verbose", default=False, help="Print debug messages")
-    args = vars(parser.parse_args())
-
-    if not args['inflect']:
-        args['define'] = True
-
-    if args['pos']:
-        args['pos'] = POS_CLI_TO_LEO[args['pos']] if args['pos'] in POS_CLI_TO_LEO else args['pos']
-
+def main():
     try:
         if args['define']:
             for word in args['words']:
@@ -375,3 +350,30 @@ if __name__ == '__main__':
         if args['verbose']:
             print("Interrupted by user", file=sys.stderr)
             exit()
+
+if __name__ == '__main__':
+    lang = 'ende'  # language
+    parser = ArgumentParser(description='Retrieve word information via the Leo website')
+    parser.add_argument('words', nargs='+', help="the words to look up on the LEO website")
+    parser.add_argument("-l", "--lang", dest="source_lang", default='en',
+        choices=COUNTRY_CODES,
+        help="source language, 2 chars (e.g. 'en')")
+    parser.add_argument("-i", "--inflect",
+        action="store_true", dest="inflect", default=False,
+        help="print inflection tables for all homonyms")
+    parser.add_argument("-p", "--pos", dest="pos", choices=['all', 'n', 'v', 'adj'],
+        default='all',
+        help="Part of speech of words to translate/inflect.")
+    parser.add_argument("-d", "--define",
+        action="store_true", dest="define", default=False,
+        help="print dictionary definitions. True by default if -i is not specified.")
+    parser.add_argument("-v", "--verbose",
+        action="store_true", dest="verbose", default=False, help="Print debug messages")
+    args = vars(parser.parse_args())
+    if not args['inflect']:
+        args['define'] = True
+
+    if args['pos']:
+        args['pos'] = POS_CLI_TO_LEO[args['pos']] if args['pos'] in POS_CLI_TO_LEO else args['pos']
+
+    main()
