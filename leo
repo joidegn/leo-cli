@@ -58,7 +58,7 @@ class LeoRequestManager:
         if verbose:
             print('Requesting URL: %s' % url, file=sys.stderr)
         r = requests.get(url)
-        soup = BeautifulSoup(r.text, 'html.parser')
+        soup = BeautifulSoup(r.text, features='xml')
         return soup
 
 requestManager = LeoRequestManager()
