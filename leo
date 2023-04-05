@@ -347,6 +347,9 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--inflect",
         action="store_true", dest="inflect", default=False,
         help="print inflection tables for all homonyms")
+    parser.add_argument("-s", "--similar",
+        action="store_true", dest="similar", default=False,
+        help="show similar words")
     parser.add_argument("-p", "--pos", dest="pos", choices=['all', 'n', 'v', 'adj'],
         default='all',
         help="Part of speech of words to translate/inflect.")
@@ -371,7 +374,7 @@ if __name__ == '__main__':
                     _print_translation(entries)
                 else:
                     print('\tNo translations found')
-                if similar:
+                if similar and args["similar"]:
                     print("\nSimilar Words")
                     _print_similar(similar)
                 if args['inflect']:
@@ -390,7 +393,7 @@ if __name__ == '__main__':
                     sys.stdout.flush()
                 if table_count == 0:
                     print("\tNo inflection tables found for " + word)
-                if similar:
+                if similar and args["similar"]:
                     print("\nSimilar Words")
                     _print_similar(similar)
 
