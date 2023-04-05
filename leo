@@ -408,6 +408,7 @@ def main():
             print("Interrupted by user", file=sys.stderr)
             exit()
 
+
 if __name__ == '__main__':
     lang = 'ende'  # language
     parser = ArgumentParser(description='Retrieve word information via the Leo website')
@@ -418,6 +419,9 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--inflect",
         action="store_true", dest="inflect", default=False,
         help="print inflection tables for all homonyms")
+    parser.add_argument("-s", "--similar",
+        action="store_true", dest="similar", default=False,
+        help="show similar words")
     parser.add_argument("-p", "--pos", dest="pos", choices=['all', 'n', 'v', 'adj'],
         default='all',
         help="Part of speech of words to translate/inflect.")
@@ -427,6 +431,13 @@ if __name__ == '__main__':
     parser.add_argument("-v", "--verbose",
         action="store_true", dest="verbose", default=False, help="Print debug messages")
     args = vars(parser.parse_args())
+
+    if not args['inflect']:
+        args['define'] = True
+
+    if args['pos']:
+        args['pos'] = POS_CLI_TO_LEO[args['pos']] if args['pos'] in POS_CLI_TO_LEO else args['pos']
+
     if not args['inflect']:
         args['define'] = True
 
