@@ -64,49 +64,67 @@ class LeoRequestManager:
 requestManager = LeoRequestManager()
 
 def get_entries(word, source_lang, pos_filter, verbose=False):
-    entries = _retrieve_translation_doc(word, source_lang, verbose=verbose).find_all('entry')
-    if not entries:
-        return
+    xml = _retrieve_translation_doc(word, source_lang, verbose=verbose)
+    parsed_entries = _parse_entries(xml, pos_filter)
+    parsed_similar = _parse_similar(xml)
+    return parsed_entries, parsed_similar
 
+def _parse_entries(xml, pos_filter):
+    entries = xml.find_all('entry')
     parsed_entries = []
-    for entry in entries:
-        category = entry.find('category')
-        if category is None:
-            pos = pos_filter
-        else:
-            pos = _validate_pos(pos_filter, category['type'])
-            if not pos:
-                continue
-        parsed_sides = []
-        for side in entry.find_all('side'):
-            word = side.find('word')
-            if word:
-                word = word.get_text()
+    if entries:
+        for entry in entries:
+            category = entry.find('category')
+            if category is None:
+                pos = pos_filter
             else:
-                continue
-            lang = side['lang']
-            if side.find('small'):
-                forms = side.find_all('small')
-                for form in forms:
-                    form = " ".join(form.strings)
-                    # verb conjugations
-                    if "|" in form:
-                        form = form.replace("|", "")
-                        form = form.strip()
-                        word += " (" + form + ")"
-                    # noun plurals (German-only)
-                    elif "Pl.:" in form:
-                        form = form.replace("Pl.:", "")
-                        form = form.strip()
-                        word += " (" + form + ")"
-            flecttab = side.find('flecttab')
-            if flecttab:
-                inflect_url = flecttab['url']
-            else:
-                inflect_url = None
-            parsed_sides.append({'word': word, 'inflect_url': inflect_url, 'lang': lang})
-        parsed_entries.append({'sides': parsed_sides, 'pos': pos})
+                pos = _validate_pos(pos_filter, category['type'])
+                if not pos:
+                    continue
+            parsed_sides = []
+            for side in entry.find_all('side'):
+                word = side.find('word')
+                if word:
+                    word = word.get_text()
+                else:
+                    continue
+                lang = side['lang']
+                if side.find('small'):
+                    forms = side.find_all('small')
+                    for form in forms:
+                        form = " ".join(form.strings)
+                        # verb conjugations
+                        if "|" in form:
+                            form = form.replace("|", "")
+                            form = form.strip()
+                            word += " (" + form + ")"
+                        # noun plurals (German-only)
+                        elif "Pl.:" in form:
+                            form = form.replace("Pl.:", "")
+                            form = form.strip()
+                            word += " (" + form + ")"
+                flecttab = side.find('flecttab')
+                if flecttab:
+                    inflect_url = flecttab['url']
+                else:
+                    inflect_url = None
+                parsed_sides.append({'word': word, 'inflect_url': inflect_url, 'lang': lang})
+            parsed_entries.append({'sides': parsed_sides, 'pos': pos})
     return parsed_entries
+
+def _parse_similar(xml):
+    parsed_similar = {}
+    similar = xml.find('similar')
+    if similar:
+        for side in similar.find_all('side'):
+            lang = LANGUAGES.get(side['lang'], side['lang'])
+            words = []
+            for word in side.find_all('word'):
+                words.append(word.get_text())
+            if words:
+                parsed_similar[lang] = words
+    return parsed_similar
+
 
 def _validate_pos(pos_filter, pos):
     # often no clear distinction between adjective and adverb in German
@@ -287,7 +305,10 @@ def _print_translation(translation):
     word_table = []
     for entry in translation:
         word_table.append([side['word'] for side in entry['sides']])
-    print(tabulate(word_table, headers=[LANGUAGES[args['source_lang']], 'German']))
+    print(tabulate(word_table, headers=[LANGUAGES.get(args['source_lang'], args['source_lang']), 'German']))
+
+def _print_similar(similar):
+    print(tabulate(similar, headers="keys"))
 
 def _print_inflection_table(table):
     print("/".join(table['translations']))
@@ -325,17 +346,20 @@ def main():
     try:
         if args['define']:
             for word in args['words']:
-                entries = get_entries(word, args['source_lang'], args['pos'], verbose=args['verbose'])
-                if entries is not None:
+                entries, similar = get_entries(word, args['source_lang'], args['pos'], verbose=args['verbose'])
+                if entries:
                     _print_translation(entries)
                 else:
                     print('\tNo translations found')
+                if similar:
+                    print("\nSimilar Words")
+                    _print_similar(similar)
                 if args['inflect']:
                     print()
                 sys.stdout.flush()
         if args['inflect']:
             for word in args['words']:
-                entries = get_entries(word, args['source_lang'], args['pos'], verbose=args['verbose'])
+                entries, similar = get_entries(word, args['source_lang'], args['pos'], verbose=args['verbose'])
                 tables = inflect(entries, verbose=args['verbose'])
 
                 table_count = 0
@@ -346,6 +370,10 @@ def main():
                     sys.stdout.flush()
                 if table_count == 0:
                     print("\tNo inflection tables found for " + word)
+                if similar:
+                    print("\nSimilar Words")
+                    _print_similar(similar)
+
     except user_interrupt_errors as error:
         if args['verbose']:
             print("Interrupted by user", file=sys.stderr)
