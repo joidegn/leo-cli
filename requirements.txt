@@ -1,4 +1,4 @@
-bs4
+beautifulsoup4
 requests>=2.0.0
 tabulate>=0.7.7
 lxml
