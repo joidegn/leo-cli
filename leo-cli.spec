@@ -61,3 +61,11 @@ rm -rf $RPM_BUILD_ROOT
 %{python3_sitelib}/leo_cli-%{unmangled_version}.dist-info/
 %doc README.md
 %license LICENSE.txt
+
+
+%changelog
+* Tue Oct 31 2023 Mike Gerber <mike@mike-gerber.de> - 0.4.0-1%{?dist}
+- Update to 0.4.0
+- Fix beautifulsoup4 dependency
+- Remove "main" entrypoint + egg_info via patch
+- Use Python RPM macros for dependencies etc.
