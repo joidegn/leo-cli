@@ -1,7 +1,7 @@
 %define name leo-cli
-%define version 0.3.4
-%define unmangled_version 0.3.4
-%define release 2
+%define version 0.4.0
+%define unmangled_version %{version}
+%define release 1%{?dist}
 
 Summary: leo.org command line tool
 Name: %{name}
