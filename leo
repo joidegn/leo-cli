@@ -58,6 +58,14 @@ class LeoRequestManager:
         if verbose:
             print('Requesting URL: %s' % url, file=sys.stderr)
         r = requests.get(url)
+        if not r.ok:
+            msg = 'Error: LEO returned HTTP %d for %s' % (r.status_code, url)
+            if r.status_code == 403:
+                msg += ('\nThe server is likely blocking automated requests '
+                        '(Cloudflare bot detection). This tool cannot '
+                        'currently bypass that challenge.')
+            print(msg, file=sys.stderr)
+            sys.exit(1)
         soup = BeautifulSoup(r.text, features='xml')
         return soup
 
