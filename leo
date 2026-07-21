@@ -18,7 +18,7 @@ try:
         import itertools.izip as zip
     except ImportError:
         pass
-    import requests
+    from curl_cffi import requests
     import time
 
     from bs4 import BeautifulSoup
@@ -31,6 +31,11 @@ except user_interrupt_errors as error:
         raise error
 
 TARGET_LANG = 'de'
+
+# LEO sits behind Cloudflare, which fingerprints the TLS handshake and blocks
+# plain HTTP clients. curl_cffi impersonates a real browser's TLS stack to get
+# through. The working targets drift as Cloudflare updates, so we try several.
+IMPERSONATE_TARGETS = ('firefox', 'chrome124', 'safari')
 
 COUNTRY_CODES = {'de', 'en', 'fr', 'es', 'pt', 'ru', 'it'}
 LANGUAGES = {'fr': 'French', 'de': 'German', 'es': 'Spanish', 'en': 'English', 'ru': 'Russian', 'pt': 'Portuguese', 'it': 'Italian'}
@@ -57,13 +62,20 @@ class LeoRequestManager:
         self.recentlySent = True
         if verbose:
             print('Requesting URL: %s' % url, file=sys.stderr)
-        r = requests.get(url)
+        r = None
+        for target in IMPERSONATE_TARGETS:
+            r = requests.get(url, impersonate=target)
+            if r.ok:
+                break
+            if verbose:
+                print('Impersonating %s got HTTP %d, trying next target...'
+                      % (target, r.status_code), file=sys.stderr)
         if not r.ok:
             msg = 'Error: LEO returned HTTP %d for %s' % (r.status_code, url)
             if r.status_code == 403:
-                msg += ('\nThe server is likely blocking automated requests '
-                        '(Cloudflare bot detection). This tool cannot '
-                        'currently bypass that challenge.')
+                msg += ('\nThe server is blocking automated requests '
+                        '(Cloudflare bot detection). Tried impersonating: %s.'
+                        % ', '.join(IMPERSONATE_TARGETS))
             print(msg, file=sys.stderr)
             sys.exit(1)
         soup = BeautifulSoup(r.text, features='xml')

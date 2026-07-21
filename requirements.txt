@@ -1,4 +1,4 @@
 beautifulsoup4
-requests>=2.0.0
+curl_cffi
 tabulate>=0.7.7
 lxml
