@@ -1,7 +1,7 @@
 %define name leo-cli
-%define version 0.3.4
-%define unmangled_version 0.3.4
-%define release 2
+%define version 0.4.0
+%define unmangled_version %{version}
+%define release 1%{?dist}
 
 Summary: leo.org command line tool
 Name: %{name}
@@ -16,7 +16,21 @@ BuildArch: noarch
 Vendor: Johannes Degn <j@degn.de>
 Url: https://github.com/JoiDegn/leo-cli
 
-BuildRequires: python3
+# Fix beautifulsoup4 dependency #29
+# https://github.com/joidegn/leo-cli/pull/29
+Patch0: leo-cli-git-fix-beautifulsoup4-dependency.patch
+# Remove entrypoint main + egg_info from setup.cfg
+# https://github.com/joidegn/leo-cli/issues/30
+Patch1: leo-cli-remove-main+egg_info.patch
+
+
+BuildRequires: pyproject-rpm-macros
+
+%py_provides python3-leo-cli
+
+%generate_buildrequires
+%pyproject_buildrequires -r
+
 
 %description
 leo-cli is a command line tool which can be used to translate words or phrases
@@ -25,17 +39,33 @@ wrote this because visiting their website, choosing the language, typing the
 word and clicking the submit button required several too many steps. I am a lazy
 person.
 
+
 %prep
 %setup -n %{name}-%{unmangled_version}
+%patch -P0 -p1
+%patch -P1
 
 %build
-python3 setup.py build
+%pyproject_wheel
 
 %install
-python3 setup.py install -O1 --root=$RPM_BUILD_ROOT --record=INSTALLED_FILES
+%pyproject_install
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-%files -f INSTALLED_FILES
+
+%files
 %defattr(-,root,root)
+%{_bindir}/leo
+%{python3_sitelib}/leo_cli-%{unmangled_version}.dist-info/
+%doc README.md
+%license LICENSE.txt
+
+
+%changelog
+* Tue Oct 31 2023 Mike Gerber <mike@mike-gerber.de> - 0.4.0-1%{?dist}
+- Update to 0.4.0
+- Fix beautifulsoup4 dependency
+- Remove "main" entrypoint + egg_info via patch
+- Use Python RPM macros for dependencies etc.
