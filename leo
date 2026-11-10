@@ -306,7 +306,9 @@ def _get_tables(entries, verbose=False):
     url2translations = {}
     langs = set()
     for entry in entries:
-        target_side = next((side for side in entry['sides'] if side["lang"] == TARGET_LANG))
+        target_side = next((side for side in entry['sides'] if side["lang"] == TARGET_LANG), None)
+        if target_side is None:
+            continue
         url = target_side['inflect_url']
         if url is None or url in url2translations:
             continue
